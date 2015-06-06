@@ -1,0 +1,22 @@
+{
+  "name": "macattack-express",
+  "version": "0.0.1",
+  "description": "macattack for express",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GTDev87/macattack-express.git"
+  },
+  "author": "Gregory Thompson",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/GTDev87/macattack-express/issues"
+  },
+  "dependencies": {
+    "macattack": "latest"
+  },
+  "homepage": "https://github.com/GTDev87/macattack-express"
+}
