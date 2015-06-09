@@ -1,4 +1,4 @@
-var macattack = require("../macattack");
+var macattack = require("macattack");
 
 function getTokenFromReq(req, headerKey) {
   if (req.headers && req.headers.authorization) {
