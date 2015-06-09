@@ -15,7 +15,6 @@ module.exports = function (optionsObj) {
 
   console.log("options set for macattack express");
   return function (req, res, next){
-    debugger
 
     console.log("running pre request");
 
@@ -25,6 +24,7 @@ module.exports = function (optionsObj) {
     var route = req.path;
     var databaseSecret = optionsObj.secret || "secret";
     var requestData = req.body;
+    var action = req.method;
 
     try {
       serializedMac = getTokenFromReq(req, headerKey);
@@ -32,7 +32,9 @@ module.exports = function (optionsObj) {
       return next(e);
     }
 
-    if(!macattack.validateMac(serializedMac, route, databaseSecret, requestData)) { return next(new Error("Macaroon is not valid ")); }
+    if(!macattack.validateMac(serializedMac, databaseSecret, route, action, requestData)) { 
+      return next(new Error("Macaroon is not valid ")); 
+    }
     return next();
   }
 };
