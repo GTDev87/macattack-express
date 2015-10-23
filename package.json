@@ -4,7 +4,7 @@
   "description": "macattack for express",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "test": "node ./node_modules/jasmine/bin/jasmine.js"
   },
   "repository": {
     "type": "git",
@@ -18,6 +18,9 @@
   "dependencies": {
     "macaroons.js": "^0.3.5",
     "macattack": "0.0.6"
+  },
+  "devDependencies": {
+    "jasmine": "^2.3.1"
   },
   "homepage": "https://github.com/GTDev87/macattack-express"
 }

@@ -1,4 +1,7 @@
-var macattack = require("macattack");
+var macattack = require("macattack"),
+  macaroons = require("macaroons.js"),
+  MacaroonsBuilder = macaroons.MacaroonsBuilder,
+  MacaroonsVerifier = macaroons.MacaroonsVerifier;
 
 function getTokenFromReq(req, headerKey) {
   if (req.headers && req.headers.authorization) {
@@ -12,13 +15,14 @@ module.exports = function (optionsObj) {
   var options = optionsObj || {};
   return function (req, res, next){
     var serializedMacs;
+    // TODO LATER 
     // var pemCert = cert_encoder.convert(req.connection.getPeerCertificate().raw);//certificate for comprison
 
     try { serializedMacs = getTokenFromReq(req, optionsObj.headerKey || 'Bearer'); }
     catch (e) { return next(e); }
 
     var eachMac = serializedMacs.split(",");
-    var macs = eachMac.map(function (serialMac) { return MacaroonsBuilder.deserialize(serialMac); })
+    var macs = eachMac.map(function (serialMac) { return serialMac && MacaroonsBuilder.deserialize(serialMac); })
 
     var rootMac = macs[0];
     var dischargeMac = macs[1];
@@ -29,7 +33,7 @@ module.exports = function (optionsObj) {
 
     rootMacVerifier = (requestReadyMac ? rootMacVerifier.satisfy3rdParty(requestReadyMac) : rootMacVerifier)
     rootMacVerifier = macattack.validateMac(rootMacVerifier, req.body, rootMacVerifier);
-    var isValid = rootMacVerifier.isValid(optionsObj.secret || "secret");
+    var isValid = rootMacVerifier.assertIsValid(optionsObj.secret || "secret");
 
     return isValid ? next() : next(new Error("Macaroon is not valid "));
   }
