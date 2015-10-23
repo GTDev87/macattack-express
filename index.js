@@ -28,13 +28,10 @@ module.exports = function (optionsObj) {
     var dischargeMac = macs[1];
 
     var requestReadyMac = dischargeMac && MacaroonsBuilder.modify(rootMac).prepare_for_request(dischargeMac).getMacaroon();
-    
     var rootMacVerifier = new MacaroonsVerifier(rootMac);
 
-    rootMacVerifier = (requestReadyMac ? rootMacVerifier.satisfy3rdParty(requestReadyMac) : rootMacVerifier)
-    rootMacVerifier = macattack.validateMac(rootMacVerifier, req.body, rootMacVerifier);
-    var isValid = rootMacVerifier.assertIsValid(optionsObj.secret || "secret");
+    rootMacVerifier = (requestReadyMac ? rootMacVerifier.satisfy3rdParty(requestReadyMac) : rootMacVerifier);
 
-    return isValid ? next() : next(new Error("Macaroon is not valid "));
+    return rootMacVerifier.isValid(optionsObj.secret || "secret") ? next() : next(new Error("Macaroon is not valid "));
   }
 };
