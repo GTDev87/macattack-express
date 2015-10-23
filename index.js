@@ -3,7 +3,7 @@ var macattack = require("macattack");
 function getTokenFromReq(req, headerKey) {
   if (req.headers && req.headers.authorization) {
     var parts = req.headers.authorization.split(' ');
-    if (parts.length === 2 && parts[0] === headerKey) { return parts[1]; }
+    if (parts.length > 1 && parts[0] === headerKey) { return parts.slice(1).join(" "); }
   }
   throw new Error("macaroon not found");
 }
@@ -11,19 +11,26 @@ function getTokenFromReq(req, headerKey) {
 module.exports = function (optionsObj) {
   var options = optionsObj || {};
   return function (req, res, next){
-    var serializedMac;
+    var serializedMacs;
+    var pemCert = cert_encoder.convert(req.connection.getPeerCertificate().raw);//certificate for comprison
 
-    try { serializedMac = getTokenFromReq(req, optionsObj.headerKey || 'Bearer'); }
+    try { serializedMacs = getTokenFromReq(req, optionsObj.headerKey || 'Bearer'); }
     catch (e) { return next(e); }
 
-    //separate out 3rd party caveat portion
+    var eachMac = serializedMacs.split(",");
+    var macs = _.map(eachMac, function (serialMac) { return MacaroonsBuilder.deserialize(serialMac); })
 
-    if(!macattack.validateMac(serializedMac, optionsObj.secret || "secret", req.body)) { 
-      // validateMac(serializedMac, databaseSecret, requestData);
+    var rootMac = macs[0];
+    var dischargeMac = macs[1];
 
-      return next(new Error("Macaroon is not valid ")); 
-    }
+    var requestReadyMac = dischargeMac && MacaroonsBuilder.modify(rootMac).prepare_for_request(dischargeMac).getMacaroon();
+    
+    var rootMacVerifier = new MacaroonsVerifier(rootMac);
 
-    return next();
+    rootMacVerifier = (requestReadyMac ? rootMacVerifier.satisfy3rdParty(requestReadyMac) : rootMacVerifier)
+    rootMacVerifier = macattack.validateMac(rootMacVerifier, req.body, rootMacVerifier);
+    var isValid = rootMacVerifier.isValid(optionsObj.secret || "secret");
+
+    return isValid ? next() : next(new Error("Macaroon is not valid "));
   }
 };
