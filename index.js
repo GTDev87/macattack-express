@@ -12,7 +12,7 @@ module.exports = function (optionsObj) {
   var options = optionsObj || {};
   return function (req, res, next){
     var serializedMacs;
-    var pemCert = cert_encoder.convert(req.connection.getPeerCertificate().raw);//certificate for comprison
+    // var pemCert = cert_encoder.convert(req.connection.getPeerCertificate().raw);//certificate for comprison
 
     try { serializedMacs = getTokenFromReq(req, optionsObj.headerKey || 'Bearer'); }
     catch (e) { return next(e); }
