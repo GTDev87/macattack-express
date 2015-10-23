@@ -18,7 +18,7 @@ module.exports = function (optionsObj) {
     catch (e) { return next(e); }
 
     var eachMac = serializedMacs.split(",");
-    var macs = _.map(eachMac, function (serialMac) { return MacaroonsBuilder.deserialize(serialMac); })
+    var macs = eachMac.map(function (serialMac) { return MacaroonsBuilder.deserialize(serialMac); })
 
     var rootMac = macs[0];
     var dischargeMac = macs[1];
