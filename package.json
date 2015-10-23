@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "macaroons.js": "^0.3.5",
-    "macattack": "latest"
+    "macattack": "0.0.6"
   },
   "homepage": "https://github.com/GTDev87/macattack-express"
 }
