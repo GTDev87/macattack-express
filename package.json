@@ -16,6 +16,7 @@
     "url": "https://github.com/GTDev87/macattack-express/issues"
   },
   "dependencies": {
+    "cert_encoder": "0.0.0",
     "macaroons.js": "^0.3.5",
     "macattack": "0.0.6"
   },
