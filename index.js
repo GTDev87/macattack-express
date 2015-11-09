@@ -45,48 +45,29 @@ module.exports = function (optionsObj, callback) {
   
     console.log("client_macaroon=" + JSON.stringify(caveatMacaroon));
 
-    //macattack_express
-    pem.createCertificate({days:1, selfSigned:true}, function(err, keys){
-      if(err) {return callback(err);}
-      var options = {
-        key: keys.serviceKey, //do i need to save this off?
-        cert: keys.certificate,
-       
-        // This is necessary only if using the client certificate authentication.
-        // Without this some clients don't bother sending certificates at all, some do
-        requestCert: true,
-       
-        // Do we reject anyone who certs who haven't been signed by our recognised certificate authorities
-        rejectUnauthorized: false
-       
-        // This is necessary only if the client uses the self-signed certificate and you care about implicit authorization
-        //ca: [ fs.readFileSync('client/client-certificate.pem') ]//TODO how do i get rid of this
-      };
+    // Return Express server instance vial callback
 
-      // Return Express server instance vial callback
+    return callback(null, function (req, res, next){
+      var serializedMacs;
+      // TODO LATER 
+      var condensedCert = condenseCertificate(cert_encoder.convert(req.connection.getPeerCertificate().raw));//get rid of newlines and header and footer.
 
-      return callback(null, function (req, res, next){
-        var serializedMacs;
-        // TODO LATER 
-        var condensedCert = condenseCertificate(cert_encoder.convert(req.connection.getPeerCertificate().raw));//get rid of newlines and header and footer.
+      try { serializedMacs = getTokenFromReq(req, optionsObj.headerKey || 'Bearer'); }
+      catch (e) { return next(e); }
 
-        try { serializedMacs = getTokenFromReq(req, optionsObj.headerKey || 'Bearer'); }
-        catch (e) { return next(e); }
+      var eachMac = serializedMacs.split(",");
+      var macs = eachMac.map(function (serialMac) { return serialMac && MacaroonsBuilder.deserialize(serialMac); })
 
-        var eachMac = serializedMacs.split(",");
-        var macs = eachMac.map(function (serialMac) { return serialMac && MacaroonsBuilder.deserialize(serialMac); })
+      var rootMac = macs[0];    
+      var dischargeMac = macs[1];
+      var requestReadyMac = dischargeMac && MacaroonsBuilder.modify(rootMac).prepare_for_request(dischargeMac).getMacaroon();
+      var rootMacVerifier = new MacaroonsVerifier(rootMac);
+      rootMacVerifier = rootMacVerifier.satisfyExact("cert = " + condensedCert);
+      rootMacVerifier = (requestReadyMac ? rootMacVerifier.satisfy3rdParty(requestReadyMac) : rootMacVerifier);
 
-        var rootMac = macs[0];    
-        var dischargeMac = macs[1];
-        var requestReadyMac = dischargeMac && MacaroonsBuilder.modify(rootMac).prepare_for_request(dischargeMac).getMacaroon();
-        var rootMacVerifier = new MacaroonsVerifier(rootMac);
-        rootMacVerifier = rootMacVerifier.satisfyExact("cert = " + condensedCert);
-        rootMacVerifier = (requestReadyMac ? rootMacVerifier.satisfy3rdParty(requestReadyMac) : rootMacVerifier);
-
-        return rootMacVerifier.isValid(optionsObj.secret) ? next() : next(new Error("Macaroon is not valid "));
-      });
-      // MUST CALL Afterwards
-      // callback(https.createServer(options, app));
+      return rootMacVerifier.isValid(optionsObj.secret) ? next() : next(new Error("Macaroon is not valid "));
     });
+    // MUST CALL Afterwards
+    // callback(https.createServer(options, app));
   });
 };
