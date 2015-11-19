@@ -60,7 +60,15 @@ module.exports = function (optionsObj, callback) {
 
       var rootMac = macs[0];    
       var dischargeMac = macs[1];
-      var requestReadyMac = dischargeMac && MacaroonsBuilder.modify(rootMac).prepare_for_request(dischargeMac).getMacaroon();
+
+      var requestReadyMac = macs
+        .filter(function(mac) {return mac;})
+        .reverse()
+        .reduce(function (aggMac, upperMac) {
+          return aggMac ? MacaroonsBuilder.modify(upperMac).prepare_for_request(aggMac).getMacaroon() : aggMac;
+        });
+
+
       var rootMacVerifier = new MacaroonsVerifier(rootMac);
       rootMacVerifier = rootMacVerifier.satisfyExact("cert = " + condensedCert);
       rootMacVerifier = (requestReadyMac ? rootMacVerifier.satisfy3rdParty(requestReadyMac) : rootMacVerifier);
