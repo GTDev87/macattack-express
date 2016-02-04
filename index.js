@@ -1,7 +1,7 @@
 var macattack = require("macattack"),
-  macaroons = require("macaroons.js"),
-  MacaroonsBuilder = macaroons.MacaroonsBuilder,
-  MacaroonsVerifier = macaroons.MacaroonsVerifier,
+  macaroons = require("node-macaroons"),
+  // MacaroonsBuilder = macaroons.MacaroonsBuilder,
+  // MacaroonsVerifier = macaroons.MacaroonsVerifier,
   cert_encoder = require("cert_encoder")
   pem = require("pem"),
   crypto = require('crypto'),
@@ -47,7 +47,7 @@ module.exports = function (optionsObj, callback) {
 
     // Return Express server instance vial callback
 
-    return callback(null, function (req, res, next){
+    var controllerFn = function (req, res, next){
       var serializedMacs;
       // TODO LATER 
       var condensedCert = condenseCertificate(cert_encoder.convert(req.connection.getPeerCertificate().raw));//get rid of newlines and header and footer.
@@ -55,26 +55,22 @@ module.exports = function (optionsObj, callback) {
       try { serializedMacs = getTokenFromReq(req, optionsObj.headerKey || 'Bearer'); }
       catch (e) { return next(e); }
 
-      var eachMac = serializedMacs.split(",");
-      var macs = eachMac.map(function (serialMac) { return serialMac && MacaroonsBuilder.deserialize(serialMac); })
+      var macs =  serializedMacs
+        .split(",")
+        .map(function (serialMac) { return serialMac &&  macaroons.deserialize(serialMac); });
 
-      var rootMac = macs[0];    
-      var dischargeMac = macs[1];
+      var rootMacVerifier = macaroons.newVerifier(macs[0])
+        .secret(optionsObj.secret)
+        .discharges(macs.slice(1))
+        .addCaveatCheck(function (cav) { return cav === "cert = " + condensedCert; });
 
-      var requestReadyMac = macs
-        .filter(function(mac) {return mac;})
-        .reverse()
-        .reduce(function (aggMac, upperMac) {
-          return aggMac ? MacaroonsBuilder.modify(upperMac).prepare_for_request(aggMac).getMacaroon() : aggMac;
-        });
+      return rootMacVerifier.isVerified() ? next() : next(new Error("Macaroon is not valid "));
+    }
 
+    controllerFn.client_macaroon = caveatMacaroon;
+    controllerFn.cert = optionsObj.cert;
 
-      var rootMacVerifier = new MacaroonsVerifier(rootMac);
-      rootMacVerifier = rootMacVerifier.satisfyExact("cert = " + condensedCert);
-      rootMacVerifier = (requestReadyMac ? rootMacVerifier.satisfy3rdParty(requestReadyMac) : rootMacVerifier);
-
-      return rootMacVerifier.isValid(optionsObj.secret) ? next() : next(new Error("Macaroon is not valid "));
-    });
+    return callback(null, controllerFn);
     // MUST CALL Afterwards
     // callback(https.createServer(options, app));
   });

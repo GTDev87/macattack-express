@@ -1,33 +1,14 @@
 'use strict';
 
-var MacaroonsVerifier = require('macaroons.js').MacaroonsVerifier;
 var MacAttackExpress = require("../index.js");
+var pem = require("pem");
+var NodeRSA = require("node-rsa");
+var macaroons = require("node-macaroons");
 
 (function () {
   describe('createMac', function () {
 
     var res = {};
-
-    var realSerializedMacaroon = "MDAxY2xvY2F0aW9uIGh0dHA6Ly9teWJhbmsvCjAwMmNpZGVudGlmaWVyIHdlIHVzZWQgb3VyIG90aGVyIHNlY3JldCBrZXkKMDAzMGNpZCB0aGlzIHdhcyBob3cgd2UgcmVtaW5kIGF1dGggb2Yga2V5L3ByZWQKMDA1MXZpZCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD507iE_6VzIomYm5kmCri1MltQwo9pu7qJDiTzbWe-SdASonJMvEXezxP8mXr87hcKMDAxYmNsIGh0dHA6Ly9hdXRoLm15YmFuay8KMDAyZnNpZ25hdHVyZSCVAH8ifGHul9vpp280QK4x0_fJJRO61D-V8_-ip6mLhQo,MDAyMWxvY2F0aW9uIGh0dHA6Ly9hdXRoLm15YmFuay8KMDAzN2lkZW50aWZpZXIgdGhpcyB3YXMgaG93IHdlIHJlbWluZCBhdXRoIG9mIGtleS9wcmVkCjAwMmZzaWduYXR1cmUgvDOvYuPCfD-hWsrDQUl4wMHOEGw2Hp8wKRm7n_gATJgK";
-
-    var realCertificate = 
-      "-----BEGIN CERTIFICATE-----\n" + 
-      "MIICpDCCAYwCCQCwh3WFyZu5YDANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDEwls\n" + 
-      "b2NhbGhvc3QwHhcNMTUxMTA5MTgzOTUxWhcNMTUxMTEwMTgzOTUxWjAUMRIwEAYD\n" + 
-      "VQQDEwlsb2NhbGhvc3QwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCc\n" +
-      "CaQcJgQix0v49zjo3qBheRRplJG0QgzmYaYAJPA+VVJSw3nzfgKAlI8YlTDpVAOu\n" +
-      "kOaGRLwr2yuc2yguYO8efaXVxgcGPuOQ0ueFcMxhcS8rXVLsfLQdBdN7XQ4KGg2A\n" +
-      "yOwnwFcOF/L1FKY2arB7AcCVdCBm5KvOQa4VNcANDOF9c8Z/tJY5Sri1HpELL2LA\n" +
-      "sHlfrdL1IlNt6TV78UrYNET6VKoxTcjQPvSXo/NUqnByOKELCMQjM07O6fVfhFBT\n" +
-      "DFv3iiPHbT2GhIEGGRwv3wiQan5MlG1VixUshxaIxwFm6xakyW39S7grFv7N7yBy\n" +
-      "aOaKbl4+kAW1C7YhMiINAgMBAAEwDQYJKoZIhvcNAQELBQADggEBADU2UIX95Nbk\n" +
-      "WrCJjTnjUBOlMPCUYIxKZk6ocJFT6ad3Um4eBcejOg7aj+m3h62dNi6w6LxCFaXN\n" +
-      "BGLmgvLV1CQclBjK6vWrBfjoq/qFKlcRf+GGyREd/EzoyXq33ssBQAYGRQBlv/4R\n" +
-      "+BGkjRsZ+5iJAS6RnGrZRHXPORwqioHjfaZwMJc5xjvR9NhQlWhcSMg2naNQhgNA\n" + 
-      "rmqanXRKdCIeuZNxokCTi+paNvSFdqKUOPqipX1C9CpthzIZg9JOm1KWFEOgtTh3\n" + 
-      "HuLknwXj/UlJnT1XpewFUI/34jfaX1+x11dxm9Xf+cJ03mtNLbGTTVHYp//8OL7/\n" + 
-      "2l+hP7wECNo=\n" +
-      "-----END CERTIFICATE-----";
 
     function getBlankRequest(returnCert) {
       return {
@@ -40,12 +21,21 @@ var MacAttackExpress = require("../index.js");
 
     describe("running middleware", function () {
       var middlewareFn = null;
+      var privKey = null;
+      var pubKey = null;
+      var certificate = null;
 
       beforeEach(function(done) {
-        MacAttackExpress({secret: "secret", hostPort: 443, hostIp: "127.0.0.1", cert: realCertificate}, function (err, middlewareFnObj) {
-          if(err) { return fail(err); }
-          middlewareFn = middlewareFnObj;
-          done();
+        pem.createCertificate({days:1, selfSigned:true}, function(err, keys){
+          privKey = keys.clientKey;
+          certificate = keys.certificate;
+          pubKey = keys.serviceKey;
+
+          MacAttackExpress({secret: "secret", hostPort: 443, hostIp: "127.0.0.1", cert: certificate}, function (err, middlewareFnObj) {
+            if(err) { return fail(err); }
+            middlewareFn = middlewareFnObj;
+            done();
+          });
         });
       });
 
@@ -53,7 +43,8 @@ var MacAttackExpress = require("../index.js");
         var err = null;
 
         beforeEach(function(done) {
-          var req = getBlankRequest(realCertificate);
+          var req = getBlankRequest(certificate);
+
           middlewareFn(req, res, function (errObj) {
             err = errObj;
             done();
@@ -69,8 +60,10 @@ var MacAttackExpress = require("../index.js");
         var err = null;
 
         beforeEach(function(done) {
-          var req = getBlankRequest(realCertificate);
-          req.headers.authorization = "Bearer " + realSerializedMacaroon;
+          var req = getBlankRequest(certificate);
+          var client_macaroon = middlewareFn.client_macaroon;
+          req.headers.authorization = "Bearer " + client_macaroon.macaroon;
+
           middlewareFn(req, res, function (errObj) {
             err = errObj;
             done();
@@ -79,6 +72,56 @@ var MacAttackExpress = require("../index.js");
 
         it("should display 'Macaroon is not valid'", function (){
           expect(err.message).toEqual("Macaroon is not valid ");
+        });
+      });
+
+      describe('running with macaroon/discharge pair', function (){
+        var err = null;
+
+        beforeEach(function(done) {
+          var client_macaroon = middlewareFn.client_macaroon;
+          var req = getBlankRequest(certificate);
+
+          var m = macaroons.deserialize(client_macaroon.macaroon);
+
+          function getDischarge(loc, thirdPartyLoc, cond, onOK, onErr) {
+            var key = new NodeRSA();
+            key.importKey(privKey);
+
+            var decryptedIdentifier = key.decrypt(client_macaroon.discharge).toString('utf8');
+
+            // console.log("client_macaroon.discharge = %j", client_macaroon.discharge);
+            // console.log("decryptedIdentifier = %j", decryptedIdentifier);
+
+            var splitIdentifier = decryptedIdentifier.split("\n");
+            // console.log("splitIdentifier = %j", splitIdentifier);
+
+            var splitCaveatKey = splitIdentifier[0].split(" ");
+            var caveatKey = splitCaveatKey[splitCaveatKey.length - 1];
+
+            // console.log("caveatKey = %j", caveatKey);
+
+            var dischargeMac = macaroons.newMacaroon(caveatKey, "enc = " + client_macaroon.discharge, "Macattack");
+
+            onOK(dischargeMac);
+          }
+
+          macaroons.discharge(m, getDischarge, function(discharges) {
+            var serializedDischarge = macaroons.serialize(discharges[1]);
+            // console.log("serializedDischarge = %j", serializedDischarge);
+            req.headers.authorization = "Bearer " + client_macaroon.macaroon + "," + serializedDischarge;
+
+            middlewareFn(req, res, function (errObj) {
+              err = errObj;
+              done();
+            });
+          }, function(err) {
+            throw new Error('error callback called unexpectedly: ' + err);
+          });
+        });
+
+        it("should display 'Macaroon is not valid'", function (){
+          expect(err).toEqual(undefined);
         });
       });
     });

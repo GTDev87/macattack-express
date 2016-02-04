@@ -17,12 +17,14 @@
   },
   "dependencies": {
     "cert_encoder": "0.0.0",
-    "macaroons.js": "^0.3.5",
-    "macattack": "0.0.6",
+    "macattack": "0.0.8",
+    "node-macaroons": "0.0.6",
     "pem": "^1.8.1",
-    "public-key-macaroons": "0.0.5"
+    "public-key-macaroons": "0.0.6"
   },
   "devDependencies": {
+    "node-rsa": "^0.3.2",
+    "node-macaroons": "0.0.6",
     "jasmine": "^2.3.1"
   },
   "homepage": "https://github.com/GTDev87/macattack-express"
