@@ -20,7 +20,7 @@
     "macattack": "0.0.8",
     "node-macaroons": "0.0.6",
     "pem": "^1.8.1",
-    "public-key-macaroons": "0.0.6"
+    "public-key-macaroons": "0.0.7"
   },
   "devDependencies": {
     "node-rsa": "^0.3.2",

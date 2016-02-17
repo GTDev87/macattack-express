@@ -1,7 +1,5 @@
 var macattack = require("macattack"),
   macaroons = require("node-macaroons"),
-  // MacaroonsBuilder = macaroons.MacaroonsBuilder,
-  // MacaroonsVerifier = macaroons.MacaroonsVerifier,
   cert_encoder = require("cert_encoder")
   pem = require("pem"),
   crypto = require('crypto'),
@@ -39,11 +37,11 @@ module.exports = function (optionsObj, callback) {
     if(err) {return callback(err);}
 
     var caveatKey = crypto.createHash('md5').digest('hex');
-    console.log("cert = %j", optionsObj.cert);
+    // console.log("cert = %j", optionsObj.cert);
 
     var caveatMacaroon = publicKeyMacaroons.addPublicKey3rdPartyCaveat(serializedMacaroon, "Macattack", caveatKey, "cert = " + condenseCertificate(optionsObj.cert), data.publicKey);
   
-    console.log("client_macaroon=" + JSON.stringify(caveatMacaroon));
+    // console.log("client_macaroon=" + macaroons.serialize(caveatMacaroon));
 
     // Return Express server instance vial callback
 

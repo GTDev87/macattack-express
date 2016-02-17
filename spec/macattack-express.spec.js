@@ -57,12 +57,16 @@ var macaroons = require("node-macaroons");
       });
 
       describe('running with invalid macaroon', function (){
+        
+
         var err = null;
 
         beforeEach(function(done) {
           var req = getBlankRequest(certificate);
-          var client_macaroon = middlewareFn.client_macaroon;
-          req.headers.authorization = "Bearer " + client_macaroon.macaroon;
+
+          //macaroon is an object
+          var serializedMacaroon = macaroons.serialize(middlewareFn.client_macaroon);
+          req.headers.authorization = "Bearer " + serializedMacaroon;
 
           middlewareFn(req, res, function (errObj) {
             err = errObj;
@@ -80,36 +84,25 @@ var macaroons = require("node-macaroons");
 
         beforeEach(function(done) {
           var client_macaroon = middlewareFn.client_macaroon;
+          var serializedMacaroon = macaroons.serialize(middlewareFn.client_macaroon);
           var req = getBlankRequest(certificate);
-
-          var m = macaroons.deserialize(client_macaroon.macaroon);
 
           function getDischarge(loc, thirdPartyLoc, cond, onOK, onErr) {
             var key = new NodeRSA();
             key.importKey(privKey);
-
-            var decryptedIdentifier = key.decrypt(client_macaroon.discharge).toString('utf8');
-
-            // console.log("client_macaroon.discharge = %j", client_macaroon.discharge);
-            // console.log("decryptedIdentifier = %j", decryptedIdentifier);
-
-            var splitIdentifier = decryptedIdentifier.split("\n");
-            // console.log("splitIdentifier = %j", splitIdentifier);
-
+            
+            var dischargeSerialized = cond.split(" = ")[1];
+            var decryptedIdentifier = key.decrypt(dischargeSerialized).toString('utf8');
+            var splitIdentifier = decryptedIdentifier.split("\n").filter(function (n) { return n;});
             var splitCaveatKey = splitIdentifier[0].split(" ");
             var caveatKey = splitCaveatKey[splitCaveatKey.length - 1];
-
-            // console.log("caveatKey = %j", caveatKey);
-
-            var dischargeMac = macaroons.newMacaroon(caveatKey, "enc = " + client_macaroon.discharge, "Macattack");
-
+            var dischargeMac = macaroons.newMacaroon(caveatKey, cond, thirdPartyLoc);
             onOK(dischargeMac);
           }
 
-          macaroons.discharge(m, getDischarge, function(discharges) {
+          macaroons.discharge(client_macaroon, getDischarge, function(discharges) {
             var serializedDischarge = macaroons.serialize(discharges[1]);
-            // console.log("serializedDischarge = %j", serializedDischarge);
-            req.headers.authorization = "Bearer " + client_macaroon.macaroon + "," + serializedDischarge;
+            req.headers.authorization = "Bearer " + serializedMacaroon + "," + serializedDischarge;
 
             middlewareFn(req, res, function (errObj) {
               err = errObj;
