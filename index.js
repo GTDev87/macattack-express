@@ -37,11 +37,11 @@ module.exports = function (optionsObj, callback) {
     if(err) {return callback(err);}
 
     var caveatKey = crypto.createHash('md5').digest('hex');
-    // console.log("cert = %j", optionsObj.cert);
+    console.log("cert = %j", optionsObj.cert);
 
     var caveatMacaroon = publicKeyMacaroons.addPublicKey3rdPartyCaveat(serializedMacaroon, "Macattack", caveatKey, "cert = " + condenseCertificate(optionsObj.cert), data.publicKey);
   
-    // console.log("client_macaroon=" + macaroons.serialize(caveatMacaroon));
+    console.log("client_macaroon=" + macaroons.serialize(caveatMacaroon));
 
     // Return Express server instance vial callback
 
