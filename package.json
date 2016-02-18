@@ -1,6 +1,6 @@
 {
   "name": "macattack-express",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "macattack for express",
   "main": "index.js",
   "scripts": {
