@@ -28,26 +28,17 @@ module.exports = function (optionsObj, callback) {
   options.hostIp = optionsObj.hostIp || "127.0.0.1";
   options.cert = optionsObj.cert || "cert";
 
-  //This is the initializing portion
-  ////////
-
   var serializedMacaroon = macattack.createMac(optionsObj.hostIp, optionsObj.hostPort, optionsObj.secret);
 
   pem.getPublicKey(optionsObj.cert, function (err, data) {
     if(err) {return callback(err);}
 
     var caveatKey = crypto.createHash('md5').digest('hex');
-    console.log("cert = %j", optionsObj.cert);
-
     var caveatMacaroon = publicKeyMacaroons.addPublicKey3rdPartyCaveat(serializedMacaroon, "Macattack", caveatKey, "cert = " + condenseCertificate(optionsObj.cert), data.publicKey);
-  
-    console.log("client_macaroon=" + macaroons.serialize(caveatMacaroon));
-
     // Return Express server instance vial callback
 
     var controllerFn = function (req, res, next){
       var serializedMacs;
-      // TODO LATER 
       var condensedCert = condenseCertificate(cert_encoder.convert(req.connection.getPeerCertificate().raw));//get rid of newlines and header and footer.
 
       try { serializedMacs = getTokenFromReq(req, optionsObj.headerKey || 'Bearer'); }
@@ -69,7 +60,5 @@ module.exports = function (optionsObj, callback) {
     controllerFn.cert = optionsObj.cert;
 
     return callback(null, controllerFn);
-    // MUST CALL Afterwards
-    // callback(https.createServer(options, app));
   });
 };
